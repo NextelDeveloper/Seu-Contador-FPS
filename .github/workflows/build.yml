@@ -1,41 +1,31 @@
-name: Android APK Build
+name: Gerar APK Android
 
-# Define os gatilhos que vão rodar o pipeline
 on:
   push:
-    branches: [ "main", "master" ] # Roda ao enviar código para estas branches
-  pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Permite rodar o build manualmente pelo GitHub
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Executa o pipeline em uma máquina Linux limpa
+    runs-on: ubuntu-latest
 
     steps:
-    # 1. Clona o código do repositório na máquina virtual
-    - name: Checkout do código
+    - name: Baixar o código
       uses: actions/checkout@v4
 
-    # 2. Configura o ambiente Java (essencial para o Gradle)
-    - name: Configurar o JDK 17
-      uses: actions/setup-java@v4
+    - name: Configurar Java 17
+      uses: actions/setup-java@v5
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle # Ativa o cache para acelerar os próximos builds
 
-    # 3. Dá permissão de execução para o script do Gradle
-    - name: Conceder permissão ao gradlew
+    - name: Dar permissão de execução ao Gradle
       run: chmod +x gradlew
 
-    # 4. Executa a compilação e gera o arquivo APK
-    - name: Compilar APK de Debug
+    - name: Compilar o APK (Debug)
       run: ./gradlew assembleDebug
 
-    # 5. Salva o APK gerado para que você consiga baixá-lo no painel do GitHub
-    - name: Fazer upload do APK (Artefato)
+    - name: Disponibilizar o APK para download
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
+        name: meu-app-fps
         path: app/build/outputs/apk/debug/app-debug.apk
