@@ -31,7 +31,6 @@ jobs:
         
         # Salva o nome da pasta onde o gradlew estava para o próximo passo usar
         echo "PROJECT_DIR=$(dirname "$GRADLEW_PATH")" >> $GITHUB_ENV
-
     - name: Compilar o APK (Debug)
       run: ./gradlew assembleDebug
       working-directory: ${{ env.PROJECT_DIR }}
