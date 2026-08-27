@@ -1,9 +1,13 @@
 package com.seu.fpscounter
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.os.BatteryManager
 import android.os.IBinder
 import android.view.Choreographer
 import android.view.Gravity
@@ -13,9 +17,18 @@ import android.widget.TextView
 class FpsService : Service() {
 
     private lateinit var windowManager: WindowManager
-    private lateinit var fpsTextView: TextView
+    private lateinit var infoTextView: TextView
     private var lastFrameTimeNanos: Long = 0
     private var frameCount = 0
+    private var batteryTemp: Float = 0f
+
+    // Recebedor de informações da bateria
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val temp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)
+            batteryTemp = temp / 10f // A temperatura vem em décimos de grau
+        }
+    }
 
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
@@ -25,9 +38,12 @@ class FpsService : Service() {
             }
 
             val elapsedNanos = frameTimeNanos - lastFrameTimeNanos
-            if (elapsedNanos >= 1_000_000_000) { // Atualiza a cada 1 segundo
+            if (elapsedNanos >= 1_000_000_000) {
                 val fps = (frameCount * 1_000_000_000.0 / elapsedNanos).toInt()
-                fpsTextView.text = "FPS: $fps"
+                
+                // Atualiza o texto com FPS e Temperatura
+                infoTextView.text = "FPS: $fps\nTemp: ${batteryTemp}ºC"
+                
                 frameCount = 0
                 lastFrameTimeNanos = frameTimeNanos
             }
@@ -39,16 +55,17 @@ class FpsService : Service() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         
-        // Configurando o visual do contador
-        fpsTextView = TextView(this).apply {
-            text = "FPS: --"
+        // Registra o monitoramento da bateria
+        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        
+        infoTextView = TextView(this).apply {
+            text = "FPS: --\nTemp: --ºC"
             setTextColor(Color.GREEN)
-            textSize = 20f
-            setBackgroundColor(Color.parseColor("#80000000")) // Fundo semi-transparente
-            setPadding(16, 16, 16, 16)
+            textSize = 18f
+            setBackgroundColor(Color.parseColor("#99000000")) 
+            setPadding(20, 20, 20, 20)
         }
 
-        // Configurando os parâmetros da janela flutuante
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -61,15 +78,16 @@ class FpsService : Service() {
             y = 50
         }
 
-        windowManager.addView(fpsTextView, params)
+        windowManager.addView(infoTextView, params)
         Choreographer.getInstance().postFrameCallback(frameCallback)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         Choreographer.getInstance().removeFrameCallback(frameCallback)
-        if (::fpsTextView.isInitialized) {
-            windowManager.removeView(fpsTextView)
+        unregisterReceiver(batteryReceiver)
+        if (::infoTextView.isInitialized) {
+            windowManager.removeView(infoTextView)
         }
     }
 
