@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: Baixar o código
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5 # Atualizado para v5 para sumir o aviso amarelo
 
     - name: Configurar Java 17
       uses: actions/setup-java@v5
@@ -18,14 +18,26 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Dar permissão de execução ao Gradle
-      run: chmod +x gradlew
+    - name: Localizar e Dar permissão ao Gradle
+      run: |
+        # Tenta achar o arquivo gradlew em qualquer pasta do repositório
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Erro: Arquivo gradlew nao encontrado! Você esqueceu de enviá-lo para o GitHub."
+          exit 1
+        fi
+        echo "Gradlew encontrado em: $GRADLEW_PATH"
+        chmod +x "$GRADLEW_PATH"
+        
+        # Salva o nome da pasta onde o gradlew estava para o próximo passo usar
+        echo "PROJECT_DIR=$(dirname "$GRADLEW_PATH")" >> $GITHUB_ENV
 
     - name: Compilar o APK (Debug)
       run: ./gradlew assembleDebug
+      working-directory: ${{ env.PROJECT_DIR }}
 
     - name: Disponibilizar o APK para download
       uses: actions/upload-artifact@v4
       with:
         name: meu-app-fps
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
